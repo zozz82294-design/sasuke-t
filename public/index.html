@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>لعبة الجاسوس</title>
-<script src="/socket.io/socket.io.js"></script>
+
 <style>
 body {
   font-family: Arial;
@@ -12,10 +12,16 @@ body {
   color: white;
 }
 
-button, input {
+input, button {
   padding: 10px;
   margin: 10px;
   font-size: 18px;
+  border-radius: 8px;
+  border: none;
+}
+
+button {
+  cursor: pointer;
 }
 </style>
 </head>
@@ -37,8 +43,12 @@ button, input {
 <h2>اللاعبين:</h2>
 <ul id="players"></ul>
 
+<script src="/socket.io/socket.io.js"></script>
+
 <script>
-const socket = io();
+const socket = io({
+  transports: ["websocket"] // يمنع البطء
+});
 
 function createRoom() {
   socket.emit("createRoom");
@@ -50,6 +60,10 @@ function joinRoom() {
 
   socket.emit("joinRoom", { roomId, name });
 }
+
+socket.on("connect", () => {
+  console.log("متصل بالسيرفر");
+});
 
 socket.on("roomCreated", (id) => {
   alert("كود الغرفة: " + id);
