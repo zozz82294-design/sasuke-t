@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>لعبة الجاسوس</title>
 
@@ -16,16 +16,15 @@
 body {
   margin: 0;
   font-family: 'Cairo', sans-serif;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   color: white;
-  overflow: hidden;
 
   background: linear-gradient(-45deg, #0f0f0f, #1a1a2e, #16213e, #0f3460);
   background-size: 400% 400%;
-  animation: gradientMove 20s ease infinite;
+  animation: gradientMove 18s ease infinite;
 }
 
 @keyframes gradientMove {
@@ -36,28 +35,28 @@ body {
 
 .container {
   width: 95%;
-  max-width: 420px;
+  max-width: 520px; /* 🔥 كبرنا الحجم */
   background: rgba(255,255,255,0.06);
   backdrop-filter: blur(15px);
-  padding: 25px;
-  border-radius: 20px;
+  padding: 35px; /* 🔥 مساحات أكبر */
+  border-radius: 25px;
   text-align: center;
-  box-shadow: 0 0 40px rgba(0,0,0,0.6);
-  transition: 0.4s;
+  box-shadow: 0 0 50px rgba(0,0,0,0.6);
 }
 
 h1 {
-  margin-bottom: 20px;
+  font-size: 28px;
+  margin-bottom: 25px;
 }
 
 button {
   width: 100%;
-  padding: 14px;
-  border-radius: 12px;
+  padding: 18px; /* 🔥 زرار أكبر */
+  border-radius: 15px;
   border: none;
   background: linear-gradient(45deg, #6c5ce7, #a29bfe);
   color: white;
-  font-size: 18px;
+  font-size: 20px;
   cursor: pointer;
   transition: 0.3s;
 }
@@ -66,56 +65,54 @@ button:hover {
   transform: scale(1.05);
 }
 
-.mode-select {
-  display: none;
-  gap: 10px;
-  margin-top: 15px;
-}
-
-.mode-btn {
-  flex: 1;
-  padding: 12px;
-  border-radius: 12px;
-  background: #222;
-  cursor: pointer;
-  transition: 0.3s;
-}
-
-.mode-btn.active {
-  background: linear-gradient(45deg, #00c6ff, #0072ff);
-}
-
 .link-box {
-  margin-top: 15px;
-  padding: 12px;
+  margin-top: 20px;
+  padding: 15px;
   background: #111;
-  border-radius: 10px;
+  border-radius: 12px;
   word-break: break-all;
+  font-size: 15px;
 }
 
 .player-box {
-  margin-top: 10px;
-  padding: 12px;
+  margin-top: 15px;
+  padding: 15px;
   background: #222;
-  border-radius: 10px;
+  border-radius: 12px;
+  font-size: 18px;
 }
 
-/* 🔥 وضع الموبايل الحقيقي */
-body.mobile {
-  align-items: flex-start;
-  padding-top: 40px;
+/* 📱 تحسين الموبايل */
+@media (max-width: 600px) {
+  .container {
+    max-width: 95%;
+    padding: 25px;
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+
+  button {
+    font-size: 18px;
+    padding: 16px;
+  }
 }
 
-body.mobile .container {
-  width: 100%;
-  height: 100vh;
-  border-radius: 0;
-  max-width: 100%;
-}
+/* 💻 تحسين الشاشات الكبيرة */
+@media (min-width: 900px) {
+  .container {
+    max-width: 600px;
+    padding: 40px;
+  }
 
-/* 💻 وضع الكمبيوتر */
-body.pc .container {
-  max-width: 420px;
+  h1 {
+    font-size: 32px;
+  }
+
+  button {
+    font-size: 22px;
+  }
 }
 
 </style>
@@ -128,11 +125,6 @@ body.pc .container {
 <h1>🕵️‍♂️ لعبة الجاسوس</h1>
 
 <button onclick="createRoom()">🎮 لعبة الجاسوس 1</button>
-
-<div class="mode-select" id="modeBox">
-  <div class="mode-btn" onclick="selectMode(this, 'mobile')">📱 موبايل</div>
-  <div class="mode-btn" onclick="selectMode(this, 'pc')">💻 كمبيوتر</div>
-</div>
 
 <div id="link" class="link-box" style="display:none;"></div>
 
@@ -154,41 +146,8 @@ try {
 }
 
 function createRoom() {
-  document.getElementById("modeBox").style.display = "flex";
-}
-
-function selectMode(el, mode) {
-  document.querySelectorAll(".mode-btn").forEach(btn => {
-    btn.classList.remove("active");
-  });
-
-  el.classList.add("active");
-
-  localStorage.setItem("mode", mode);
-
-  // 🔥 تطبيق الوضع فوراً
-  applyMode();
-
-  document.getElementById("modeBox").style.display = "none";
-
   socket.emit("createRoom", "SASUKE");
 }
-
-function applyMode() {
-  const mode = localStorage.getItem("mode");
-
-  document.body.classList.remove("mobile", "pc");
-
-  if (mode === "mobile") {
-    document.body.classList.add("mobile");
-  }
-
-  if (mode === "pc") {
-    document.body.classList.add("pc");
-  }
-}
-
-applyMode();
 
 // دخول من لينك
 const urlParams = new URLSearchParams(window.location.search);
