@@ -1,25 +1,60 @@
+const express = require("express");
 const http = require("http");
-const fs = require("fs");
+const { Server } = require("socket.io");
 const path = require("path");
 
-const port = process.env.PORT || 3000;
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-const server = http.createServer((req, res) => {
+// 👇 أهم سطر (ده اللي كان ناقصك)
+app.use(express.static(path.join(__dirname, "public")));
 
-  let filePath = path.join(__dirname, "public", "index.html");
+let rooms = {};
 
-  fs.readFile(filePath, (err, content) => {
-    if (err) {
-      res.writeHead(500);
-      res.end("Error loading file");
-    } else {
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      res.end(content);
+io.on("connection", (socket) => {
+
+  socket.on("createRoom", () => {
+    const roomId = Math.floor(1000 + Math.random() * 9000).toString();
+
+    rooms[roomId] = [];
+    socket.join(roomId);
+
+    rooms[roomId].push({
+      id: socket.id,
+      name: "SASUKE",
+      host: true
+    });
+
+    socket.emit("roomCreated", roomId);
+    io.to(roomId).emit("updatePlayers", rooms[roomId]);
+  });
+
+  socket.on("joinRoom", ({ roomId, name }) => {
+    if (!rooms[roomId]) {
+      socket.emit("errorMsg", "الغرفة غير موجودة");
+      return;
+    }
+
+    rooms[roomId].push({
+      id: socket.id,
+      name: name,
+      host: false
+    });
+
+    socket.join(roomId);
+    io.to(roomId).emit("updatePlayers", rooms[roomId]);
+  });
+
+  socket.on("disconnect", () => {
+    for (let roomId in rooms) {
+      rooms[roomId] = rooms[roomId].filter(p => p.id !== socket.id);
+      io.to(roomId).emit("updatePlayers", rooms[roomId]);
     }
   });
 
 });
 
-server.listen(port, () => {
-  console.log("Server running on port " + port);
+server.listen(3000, () => {
+  console.log("Server running...");
 });
