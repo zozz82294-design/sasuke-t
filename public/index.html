@@ -10,12 +10,23 @@
 body {
   margin: 0;
   font-family: 'Cairo', sans-serif;
-  background: linear-gradient(135deg, #0f0f0f, #1a1a2e);
-  color: white;
+  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  color: white;
+
+  /* 🔥 خلفية متحركة */
+  background: linear-gradient(-45deg, #0f0f0f, #1a1a2e, #16213e, #0f3460);
+  background-size: 400% 400%;
+  animation: gradientMove 15s ease infinite;
+}
+
+/* ✨ أنيميشن */
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .container {
@@ -26,6 +37,7 @@ body {
   padding: 25px;
   border-radius: 20px;
   text-align: center;
+  box-shadow: 0 0 30px rgba(0,0,0,0.6);
 }
 
 h1 {
@@ -63,10 +75,14 @@ button:hover {
   background: #222;
   cursor: pointer;
   transition: 0.3s;
+  border: 2px solid transparent;
 }
 
+/* 🔥 لما تختار */
 .mode-btn.active {
   background: linear-gradient(45deg, #00c6ff, #0072ff);
+  border: 2px solid white;
+  transform: scale(1.05);
 }
 
 /* لينك */
@@ -100,13 +116,12 @@ li {
 
 <h1>🕵️‍♂️ لعبة الجاسوس</h1>
 
-<!-- 🔥 مفيش input -->
-
 <button onclick="createRoom()">🎮 لعبة الجاسوس 1</button>
 
-<div class="mode-select" id="modeBox" style="display:none;">
-  <div class="mode-btn" onclick="selectMode(this)">📱 موبايل</div>
-  <div class="mode-btn" onclick="selectMode(this)">💻 كمبيوتر</div>
+<!-- 🔥 اختيار الجهاز -->
+<div class="mode-select">
+  <div class="mode-btn" onclick="selectMode(this, 'mobile')">📱 موبايل</div>
+  <div class="mode-btn" onclick="selectMode(this, 'pc')">💻 كمبيوتر</div>
 </div>
 
 <div id="link" class="link-box" style="display:none;"></div>
@@ -122,25 +137,25 @@ const socket = io({
   transports: ["websocket"]
 });
 
-let selected = false;
+let selectedMode = null;
 
-// اختيار المود
-function selectMode(el) {
+// 🔥 اختيار المود (دي كانت ناقصة عندك)
+function selectMode(el, mode) {
   document.querySelectorAll(".mode-btn").forEach(btn => {
     btn.classList.remove("active");
   });
 
   el.classList.add("active");
-  selected = true;
+  selectedMode = mode;
+
+  console.log("Selected:", mode); // للتأكد
 }
 
-// إنشاء غرفة (🔥 SASUKE ثابت)
+// إنشاء غرفة
 function createRoom() {
 
-  document.getElementById("modeBox").style.display = "flex";
-
-  if (!selected) {
-    alert("اختار موبايل او كمبيوتر");
+  if (!selectedMode) {
+    alert("اختار موبايل او كمبيوتر الأول");
     return;
   }
 
