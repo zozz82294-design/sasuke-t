@@ -1,1 +1,75 @@
-بب
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>لعبة الجاسوس</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+body {
+  font-family: Arial;
+  text-align: center;
+  background: #111;
+  color: white;
+}
+
+button, input {
+  padding: 10px;
+  margin: 10px;
+  font-size: 18px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🕵️‍♂️ لعبة الجاسوس</h1>
+
+<input id="name" placeholder="اسمك">
+<br>
+<button onclick="createRoom()">إنشاء غرفة</button>
+
+<br><br>
+
+<input id="roomId" placeholder="كود الغرفة">
+<br>
+<button onclick="joinRoom()">دخول غرفة</button>
+
+<h2>اللاعبين:</h2>
+<ul id="players"></ul>
+
+<script>
+const socket = io();
+
+function createRoom() {
+  socket.emit("createRoom");
+}
+
+function joinRoom() {
+  const name = document.getElementById("name").value;
+  const roomId = document.getElementById("roomId").value;
+
+  socket.emit("joinRoom", { roomId, name });
+}
+
+socket.on("roomCreated", (id) => {
+  alert("كود الغرفة: " + id);
+});
+
+socket.on("updatePlayers", (players) => {
+  const list = document.getElementById("players");
+  list.innerHTML = "";
+
+  players.forEach(p => {
+    const li = document.createElement("li");
+    li.textContent = p.name + (p.host ? " 👑" : "");
+    list.appendChild(li);
+  });
+});
+
+socket.on("errorMsg", (msg) => {
+  alert(msg);
+});
+</script>
+
+</body>
+</html>
