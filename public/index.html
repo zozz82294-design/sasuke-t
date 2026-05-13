@@ -74,13 +74,18 @@ button:hover {
   font-size: 15px;
 }
 
-.player-box {
+ul {
+  list-style: none;
+  padding: 0;
   margin-top: 15px;
-  padding: 15px;
+}
+
+li {
+  margin: 8px 0;
+  padding: 10px;
   background: #222;
-  border-radius: 12px;
-  font-size: 20px;
-  letter-spacing: 2px;
+  border-radius: 10px;
+  font-size: 18px;
 }
 
 /* موبايل */
@@ -109,8 +114,6 @@ button:hover {
 <button onclick="createRoom()">🎮 لعبة الجاسوس 1</button>
 
 <div id="link" class="link-box" style="display:none;"></div>
-
-<div class="player-box">𝐒𝐀𝐒𝐔𝐊𝐄 👑</div>
 
 <ul id="players"></ul>
 
@@ -149,14 +152,20 @@ socket.on("roomCreated", (id) => {
   box.innerText = "📎 اللينك:\n" + link;
 });
 
-// تحديث اللاعبين
+// عرض اللاعبين (🔥 هنا التعديل المهم)
 socket.on("updatePlayers", (players) => {
   const list = document.getElementById("players");
   list.innerHTML = "";
 
   players.forEach(p => {
     const li = document.createElement("li");
-    li.textContent = p.name;
+
+    if (p.name === "𝐒𝐀𝐒𝐔𝐊𝐄") {
+      li.textContent = "𝐒𝐀𝐒𝐔𝐊𝐄 👑";
+    } else {
+      li.textContent = p.name;
+    }
+
     list.appendChild(li);
   });
 });
