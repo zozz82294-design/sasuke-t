@@ -35,10 +35,10 @@ body {
 
 .container {
   width: 95%;
-  max-width: 520px; /* 🔥 كبرنا الحجم */
+  max-width: 520px;
   background: rgba(255,255,255,0.06);
   backdrop-filter: blur(15px);
-  padding: 35px; /* 🔥 مساحات أكبر */
+  padding: 35px;
   border-radius: 25px;
   text-align: center;
   box-shadow: 0 0 50px rgba(0,0,0,0.6);
@@ -51,7 +51,7 @@ h1 {
 
 button {
   width: 100%;
-  padding: 18px; /* 🔥 زرار أكبر */
+  padding: 18px;
   border-radius: 15px;
   border: none;
   background: linear-gradient(45deg, #6c5ce7, #a29bfe);
@@ -79,39 +79,21 @@ button:hover {
   padding: 15px;
   background: #222;
   border-radius: 12px;
-  font-size: 18px;
+  font-size: 20px;
+  letter-spacing: 2px;
 }
 
-/* 📱 تحسين الموبايل */
+/* موبايل */
 @media (max-width: 600px) {
   .container {
-    max-width: 95%;
     padding: 25px;
-  }
-
-  h1 {
-    font-size: 24px;
-  }
-
-  button {
-    font-size: 18px;
-    padding: 16px;
   }
 }
 
-/* 💻 تحسين الشاشات الكبيرة */
+/* كمبيوتر */
 @media (min-width: 900px) {
   .container {
     max-width: 600px;
-    padding: 40px;
-  }
-
-  h1 {
-    font-size: 32px;
-  }
-
-  button {
-    font-size: 22px;
   }
 }
 
@@ -128,7 +110,7 @@ button:hover {
 
 <div id="link" class="link-box" style="display:none;"></div>
 
-<div class="player-box">SASUKE 👑</div>
+<div class="player-box">𝐒𝐀𝐒𝐔𝐊𝐄 👑</div>
 
 <ul id="players"></ul>
 
@@ -146,7 +128,7 @@ try {
 }
 
 function createRoom() {
-  socket.emit("createRoom", "SASUKE");
+  socket.emit("createRoom", "𝐒𝐀𝐒𝐔𝐊𝐄");
 }
 
 // دخول من لينك
