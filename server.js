@@ -7,7 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// 👇 أهم سطر (ده اللي كان ناقصك)
+// يخدم ملفات public
 app.use(express.static(path.join(__dirname, "public")));
 
 let rooms = {};
@@ -46,15 +46,11 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("updatePlayers", rooms[roomId]);
   });
 
-  socket.on("disconnect", () => {
-    for (let roomId in rooms) {
-      rooms[roomId] = rooms[roomId].filter(p => p.id !== socket.id);
-      io.to(roomId).emit("updatePlayers", rooms[roomId]);
-    }
-  });
-
 });
 
-server.listen(3000, () => {
-  console.log("Server running...");
+// 👇 أهم سطر
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
 });
