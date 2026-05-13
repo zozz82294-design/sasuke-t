@@ -1,18 +1,143 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>لعبة الجاسوس</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+body {
+  margin: 0;
+  font-family: 'Cairo', sans-serif;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+
+  background: linear-gradient(-45deg, #0f0f0f, #1a1a2e, #16213e, #0f3460);
+  background-size: 400% 400%;
+  animation: gradientMove 15s ease infinite;
+}
+
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.container {
+  width: 90%;
+  max-width: 400px;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(12px);
+  padding: 25px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 0 30px rgba(0,0,0,0.6);
+}
+
+h1 {
+  margin-bottom: 20px;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+button:hover {
+  transform: scale(1.05);
+}
+
+.mode-select {
+  display: none;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  background: #222;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.mode-btn.active {
+  background: linear-gradient(45deg, #00c6ff, #0072ff);
+}
+
+.link-box {
+  margin-top: 15px;
+  padding: 12px;
+  background: #111;
+  border-radius: 10px;
+  word-break: break-all;
+}
+
+ul {
+  margin-top: 15px;
+  padding: 0;
+  list-style: none;
+}
+
+li {
+  background: #222;
+  margin: 5px 0;
+  padding: 10px;
+  border-radius: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🕵️‍♂️ لعبة الجاسوس</h1>
+
+<button onclick="createRoom()">🎮 لعبة الجاسوس 1</button>
+
+<div class="mode-select" id="modeBox">
+  <div class="mode-btn" onclick="selectMode(this, 'mobile')">📱 موبايل</div>
+  <div class="mode-btn" onclick="selectMode(this, 'pc')">💻 كمبيوتر</div>
+</div>
+
+<div id="link" class="link-box" style="display:none;"></div>
+
+<ul id="players"></ul>
+
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
-const socket = io({
-  transports: ["websocket"]
-});
+// 🔥 حل مشكلة الشاشة البيضا
+let socket;
+try {
+  socket = io();
+} catch (e) {
+  alert("مشكلة في الاتصال بالسيرفر");
+}
 
 let selectedMode = null;
 
-// 🔥 يظهر الاختيارات
+// اظهار الاختيارات
 function createRoom() {
   document.getElementById("modeBox").style.display = "flex";
 }
 
-// 🔥 اختيار المود
+// اختيار + تنفيذ
 function selectMode(el, mode) {
   document.querySelectorAll(".mode-btn").forEach(btn => {
     btn.classList.remove("active");
@@ -21,24 +146,20 @@ function selectMode(el, mode) {
   el.classList.add("active");
   selectedMode = mode;
 
-  // 💾 حفظ الاختيار
   localStorage.setItem("mode", mode);
 
-  // ✨ اخفاء الاختيارات
   document.getElementById("modeBox").style.display = "none";
 
-  // 🚀 إنشاء الغرفة
   socket.emit("createRoom", "SASUKE");
 }
 
-// 📱 تطبيق شكل الموبايل
+// تطبيق وضع الموبايل
 function applyMode() {
   const mode = localStorage.getItem("mode");
 
   if (mode === "mobile") {
     document.body.style.maxWidth = "400px";
     document.body.style.margin = "auto";
-    document.body.style.border = "3px solid #000";
   }
 
   if (mode === "pc") {
@@ -46,7 +167,6 @@ function applyMode() {
   }
 }
 
-// تشغيل عند الفتح
 applyMode();
 
 // دخول من لينك
@@ -89,3 +209,6 @@ socket.on("errorMsg", (msg) => {
   alert(msg);
 });
 </script>
+
+</body>
+</html>
