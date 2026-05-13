@@ -2,11 +2,17 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
 <title>لعبة الجاسوس</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   font-family: 'Cairo', sans-serif;
@@ -15,10 +21,11 @@ body {
   justify-content: center;
   align-items: center;
   color: white;
+  overflow: hidden;
 
   background: linear-gradient(-45deg, #0f0f0f, #1a1a2e, #16213e, #0f3460);
   background-size: 400% 400%;
-  animation: gradientMove 15s ease infinite;
+  animation: gradientMove 20s ease infinite;
 }
 
 @keyframes gradientMove {
@@ -28,14 +35,15 @@ body {
 }
 
 .container {
-  width: 90%;
-  max-width: 400px;
-  background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(12px);
+  width: 95%;
+  max-width: 420px;
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(15px);
   padding: 25px;
   border-radius: 20px;
   text-align: center;
-  box-shadow: 0 0 30px rgba(0,0,0,0.6);
+  box-shadow: 0 0 40px rgba(0,0,0,0.6);
+  transition: 0.4s;
 }
 
 h1 {
@@ -85,18 +93,31 @@ button:hover {
   word-break: break-all;
 }
 
-ul {
-  margin-top: 15px;
-  padding: 0;
-  list-style: none;
-}
-
-li {
+.player-box {
+  margin-top: 10px;
+  padding: 12px;
   background: #222;
-  margin: 5px 0;
-  padding: 10px;
   border-radius: 10px;
 }
+
+/* 🔥 وضع الموبايل الحقيقي */
+body.mobile {
+  align-items: flex-start;
+  padding-top: 40px;
+}
+
+body.mobile .container {
+  width: 100%;
+  height: 100vh;
+  border-radius: 0;
+  max-width: 100%;
+}
+
+/* 💻 وضع الكمبيوتر */
+body.pc .container {
+  max-width: 420px;
+}
+
 </style>
 </head>
 
@@ -115,6 +136,8 @@ li {
 
 <div id="link" class="link-box" style="display:none;"></div>
 
+<div class="player-box">SASUKE 👑</div>
+
 <ul id="players"></ul>
 
 </div>
@@ -122,48 +145,46 @@ li {
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
-// 🔥 حل مشكلة الشاشة البيضا
 let socket;
+
 try {
   socket = io();
 } catch (e) {
   alert("مشكلة في الاتصال بالسيرفر");
 }
 
-let selectedMode = null;
-
-// اظهار الاختيارات
 function createRoom() {
   document.getElementById("modeBox").style.display = "flex";
 }
 
-// اختيار + تنفيذ
 function selectMode(el, mode) {
   document.querySelectorAll(".mode-btn").forEach(btn => {
     btn.classList.remove("active");
   });
 
   el.classList.add("active");
-  selectedMode = mode;
 
   localStorage.setItem("mode", mode);
+
+  // 🔥 تطبيق الوضع فوراً
+  applyMode();
 
   document.getElementById("modeBox").style.display = "none";
 
   socket.emit("createRoom", "SASUKE");
 }
 
-// تطبيق وضع الموبايل
 function applyMode() {
   const mode = localStorage.getItem("mode");
 
+  document.body.classList.remove("mobile", "pc");
+
   if (mode === "mobile") {
-    document.body.style.maxWidth = "400px";
-    document.body.style.margin = "auto";
+    document.body.classList.add("mobile");
   }
 
   if (mode === "pc") {
-    document.body.style.maxWidth = "100%";
+    document.body.classList.add("pc");
   }
 }
 
@@ -194,13 +215,7 @@ socket.on("updatePlayers", (players) => {
 
   players.forEach(p => {
     const li = document.createElement("li");
-
-    if (p.name === "SASUKE") {
-      li.textContent = "SASUKE 👑";
-    } else {
-      li.textContent = p.name;
-    }
-
+    li.textContent = p.name;
     list.appendChild(li);
   });
 });
