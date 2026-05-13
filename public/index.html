@@ -16,13 +16,11 @@ body {
   align-items: center;
   color: white;
 
-  /* 🔥 خلفية متحركة */
   background: linear-gradient(-45deg, #0f0f0f, #1a1a2e, #16213e, #0f3460);
   background-size: 400% 400%;
   animation: gradientMove 15s ease infinite;
 }
 
-/* ✨ أنيميشن */
 @keyframes gradientMove {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -44,7 +42,6 @@ h1 {
   margin-bottom: 20px;
 }
 
-/* زر */
 button {
   width: 100%;
   padding: 14px;
@@ -61,9 +58,8 @@ button:hover {
   transform: scale(1.05);
 }
 
-/* اختيار الجهاز */
 .mode-select {
-  display: flex;
+  display: none;
   gap: 10px;
   margin-top: 15px;
 }
@@ -78,14 +74,12 @@ button:hover {
   border: 2px solid transparent;
 }
 
-/* 🔥 لما تختار */
 .mode-btn.active {
   background: linear-gradient(45deg, #00c6ff, #0072ff);
   border: 2px solid white;
   transform: scale(1.05);
 }
 
-/* لينك */
 .link-box {
   margin-top: 15px;
   padding: 12px;
@@ -94,7 +88,6 @@ button:hover {
   word-break: break-all;
 }
 
-/* لاعبين */
 ul {
   margin-top: 15px;
   padding: 0;
@@ -118,8 +111,7 @@ li {
 
 <button onclick="createRoom()">🎮 لعبة الجاسوس 1</button>
 
-<!-- 🔥 اختيار الجهاز -->
-<div class="mode-select">
+<div class="mode-select" id="modeBox">
   <div class="mode-btn" onclick="selectMode(this, 'mobile')">📱 موبايل</div>
   <div class="mode-btn" onclick="selectMode(this, 'pc')">💻 كمبيوتر</div>
 </div>
@@ -139,7 +131,12 @@ const socket = io({
 
 let selectedMode = null;
 
-// 🔥 اختيار المود (دي كانت ناقصة عندك)
+// 🔥 يظهر الاختيارات
+function createRoom() {
+  document.getElementById("modeBox").style.display = "flex";
+}
+
+// 🔥 اختيار + تنفيذ فوري
 function selectMode(el, mode) {
   document.querySelectorAll(".mode-btn").forEach(btn => {
     btn.classList.remove("active");
@@ -148,17 +145,10 @@ function selectMode(el, mode) {
   el.classList.add("active");
   selectedMode = mode;
 
-  console.log("Selected:", mode); // للتأكد
-}
+  // اخفاء
+  document.getElementById("modeBox").style.display = "none";
 
-// إنشاء غرفة
-function createRoom() {
-
-  if (!selectedMode) {
-    alert("اختار موبايل او كمبيوتر الأول");
-    return;
-  }
-
+  // إنشاء الغرفة
   socket.emit("createRoom", "SASUKE");
 }
 
