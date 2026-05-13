@@ -4,35 +4,43 @@
 <meta charset="UTF-8">
 <title>لعبة الجاسوس</title>
 
-<!-- 🔥 فونت حلو -->
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   font-family: 'Cairo', sans-serif;
   background: linear-gradient(135deg, #0f0f0f, #1a1a2e);
   color: white;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
 }
 
+/* 🔥 container responsive */
 .container {
   width: 90%;
-  max-width: 400px;
+  max-width: 500px;
+  margin: auto;
+  margin-top: 80px;
   background: rgba(255,255,255,0.05);
   backdrop-filter: blur(12px);
   padding: 25px;
   border-radius: 20px;
-  box-shadow: 0 0 25px rgba(0,0,0,0.6);
   text-align: center;
+}
+
+/* 💻 شاشة كبيرة */
+@media(min-width: 900px){
+  .container {
+    max-width: 700px;
+    padding: 40px;
+  }
 }
 
 h1 {
   margin-bottom: 20px;
-  font-weight: 800;
 }
 
 input {
@@ -43,10 +51,11 @@ input {
   margin-bottom: 15px;
   background: #222;
   color: white;
-  font-family: 'Cairo', sans-serif;
+  font-family: 'Cairo';
 }
 
-button {
+/* 🎮 زرار اللعبة */
+.main-btn {
   width: 100%;
   padding: 14px;
   border-radius: 12px;
@@ -54,24 +63,51 @@ button {
   background: linear-gradient(45deg, #6c5ce7, #a29bfe);
   color: white;
   font-size: 18px;
-  font-weight: 600;
   cursor: pointer;
   transition: 0.3s;
 }
 
-button:hover {
+.main-btn:hover {
   transform: scale(1.05);
 }
 
+/* 🔥 اختيار الجهاز */
+.mode-select {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  background: #222;
+  cursor: pointer;
+  transition: 0.3s;
+  border: 2px solid transparent;
+}
+
+.mode-btn.active {
+  background: linear-gradient(45deg, #00c6ff, #0072ff);
+  transform: scale(1.05);
+}
+
+/* ✨ animation */
+.mode-btn:hover {
+  transform: scale(1.05);
+}
+
+/* 📎 لينك */
 .link-box {
   margin-top: 15px;
   padding: 12px;
   background: #111;
   border-radius: 10px;
-  font-size: 14px;
   word-break: break-all;
 }
 
+/* 👥 لاعبين */
 ul {
   margin-top: 15px;
   padding: 0;
@@ -83,7 +119,6 @@ li {
   margin: 5px 0;
   padding: 10px;
   border-radius: 10px;
-  font-weight: 600;
 }
 </style>
 </head>
@@ -96,8 +131,13 @@ li {
 
 <input id="name" placeholder="اكتب اسمك">
 
-<!-- 🔥 الزر الجديد -->
-<button onclick="createRoom()">🎮 لعبة الجاسوس 1</button>
+<button class="main-btn" onclick="createRoom()">🎮 لعبة الجاسوس 1</button>
+
+<!-- 🔥 اختيار الجهاز -->
+<div class="mode-select" id="modeBox" style="display:none;">
+  <div class="mode-btn" onclick="selectMode(this, 'mobile')">📱 موبايل</div>
+  <div class="mode-btn" onclick="selectMode(this, 'pc')">💻 كمبيوتر</div>
+</div>
 
 <div id="link" class="link-box" style="display:none;"></div>
 
@@ -112,4 +152,77 @@ const socket = io({
   transports: ["websocket"]
 });
 
-const urlParams = new
+let selectedMode = null;
+
+// 🔥 اختيار مود
+function selectMode(el, mode) {
+  document.querySelectorAll(".mode-btn").forEach(btn => {
+    btn.classList.remove("active");
+  });
+
+  el.classList.add("active");
+  selectedMode = mode;
+}
+
+// 🔥 عند إنشاء غرفة
+function createRoom() {
+  const name = document.getElementById("name").value;
+
+  if (!name) {
+    alert("اكتب اسمك");
+    return;
+  }
+
+  document.getElementById("modeBox").style.display = "flex";
+
+  if (!selectedMode) {
+    alert("اختار موبايل او كمبيوتر");
+    return;
+  }
+
+  socket.emit("createRoom", name);
+}
+
+// 🔥 قراءة اللينك
+const urlParams = new URLSearchParams(window.location.search);
+const roomId = urlParams.get("room");
+
+if (roomId) {
+  const name = prompt("اكتب اسمك:");
+
+  document.getElementById("modeBox").style.display = "flex";
+
+  socket.emit("joinRoom", {
+    roomId: roomId,
+    name: name
+  });
+}
+
+// 🔥 عرض اللينك
+socket.on("roomCreated", (id) => {
+  const link = window.location.origin + "?room=" + id;
+
+  const box = document.getElementById("link");
+  box.style.display = "block";
+  box.innerText = "📎 اللينك:\n" + link;
+});
+
+// 👥 تحديث اللاعبين
+socket.on("updatePlayers", (players) => {
+  const list = document.getElementById("players");
+  list.innerHTML = "";
+
+  players.forEach(p => {
+    const li = document.createElement("li");
+    li.textContent = p.name + (p.host ? " 👑" : "");
+    list.appendChild(li);
+  });
+});
+
+socket.on("errorMsg", (msg) => {
+  alert(msg);
+});
+</script>
+
+</body>
+</html>
