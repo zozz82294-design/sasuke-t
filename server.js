@@ -7,7 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// يخدم ملفات public
+// مهم: قراءة ملفات public
 app.use(express.static(path.join(__dirname, "public")));
 
 let rooms = {};
@@ -18,6 +18,7 @@ io.on("connection", (socket) => {
     const roomId = Math.floor(1000 + Math.random() * 9000).toString();
 
     rooms[roomId] = [];
+
     socket.join(roomId);
 
     rooms[roomId].push({
@@ -31,6 +32,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("joinRoom", ({ roomId, name }) => {
+
     if (!rooms[roomId]) {
       socket.emit("errorMsg", "الغرفة غير موجودة");
       return;
@@ -43,12 +45,13 @@ io.on("connection", (socket) => {
     });
 
     socket.join(roomId);
+
     io.to(roomId).emit("updatePlayers", rooms[roomId]);
   });
 
 });
 
-// 👇 أهم سطر
+// 👇 أهم سطر (Railway)
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
