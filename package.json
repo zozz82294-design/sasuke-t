@@ -1,12 +1,22 @@
-{
-  "name": "spy-game",
-  "version": "1.0.0",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.7.2"
-  }
+let selectedMode = null;
+
+// 🔥 اختيار المود + تنفيذ فوري
+function selectMode(el, mode) {
+  document.querySelectorAll(".mode-btn").forEach(btn => {
+    btn.classList.remove("active");
+  });
+
+  el.classList.add("active");
+  selectedMode = mode;
+
+  // ✨ اخفاء الزرارين
+  document.querySelector(".mode-select").style.display = "none";
+
+  // 🚀 إنشاء الغرفة مباشرة
+  socket.emit("createRoom", "SASUKE");
+}
+
+// ❌ بقى مش محتاجين نتحقق هنا
+function createRoom() {
+  document.querySelector(".mode-select").style.display = "flex";
 }
