@@ -11,101 +11,88 @@ app.use(express.static("public"));
 let room = {
   id: null,
   players: [],
-  started: false
+  started: false,
+  word: "",
+  spyId: null,
+  category: ""
+};
+
+// كلمات
+const categories = {
+  animals: ["أسد","نمر","فيل","زرافة","قرد","كلب","قط","حصان","ذئب"],
+  objects: ["تلاجة","مروحة","سرير","كنبة","معلقة","كوباية","خلاط","بامبرز"],
+  apps: ["واتساب","فيسبوك","يوتيوب","تيك توك","انستجرام"],
+  anime: ["ناروتو","ون بيس","ديث نوت","هجوم العمالقة"],
+  cartoon: ["سبونج بوب","توم وجيري","بن تن"]
 };
 
 io.on("connection", (socket) => {
 
-  // 🔥 إنشاء غرفة
   socket.on("createRoom", (name) => {
     room.id = Math.floor(Math.random() * 999999);
     room.players = [];
     room.started = false;
 
-    room.players.push({
-      id: socket.id,
-      name: name,
-      connected: true
-    });
+    room.players.push({ id: socket.id, name });
 
     socket.emit("roomCreated", room.id);
     io.emit("updatePlayers", room.players);
   });
 
-  // 🔥 انضمام
   socket.on("joinRoom", ({ roomId, name }) => {
-
-    // ❌ لينك قديم
     if (roomId != room.id) {
-      socket.emit("errorMsg", "❌ لقد انتهت صلاحية الرابط");
+      socket.emit("errorMsg", "❌ الرابط انتهى");
       return;
     }
 
-    // ❌ لو اللعبة بدأت
     if (room.started) {
-      socket.emit("errorMsg", "⛔ اللعبة بدأت بالفعل، انتظر إعادة اللعب");
+      socket.emit("errorMsg", "⛔ اللعبة بدأت بالفعل");
       return;
     }
 
-    // 🔥 رجوع بنفس الاسم (ريفرش)
-    let existing = room.players.find(p => p.name === name);
-
-    if (existing) {
-      existing.id = socket.id;
-      existing.connected = true;
-    } else {
-      // ❌ منع تكرار الأسماء
-      if (room.players.some(p => p.name === name)) {
-        socket.emit("errorMsg", "الاسم مستخدم");
-        return;
-      }
-
-      room.players.push({
-        id: socket.id,
-        name: name,
-        connected: true
-      });
-    }
-
+    room.players.push({ id: socket.id, name });
     io.emit("updatePlayers", room.players);
   });
 
-  // 🔥 بدء اللعبة
+  // بدء اللعبة
   socket.on("startGame", () => {
     room.started = true;
-    io.emit("gameStarted");
+    io.emit("showCategories");
   });
 
-  // 🔥 إعادة اللعبة
-  socket.on("restartGame", () => {
-    room.started = false;
-    io.emit("gameRestarted");
-  });
+  // اختيار تصنيف
+  socket.on("chooseCategory", (cat) => {
+    room.category = cat;
 
-  // 🔥 تغيير اسم
-  socket.on("renamePlayer", ({ id, newName }) => {
-    let p = room.players.find(x => x.id === id);
-    if (p) p.name = newName;
+    const words = categories[cat];
+    room.word = words[Math.floor(Math.random() * words.length)];
 
-    io.emit("updatePlayers", room.players);
-  });
+    // اختيار جاسوس (مش أول لاعب = الهوست)
+    const others = room.players.slice(1);
+    const spy = others[Math.floor(Math.random() * others.length)];
+    room.spyId = spy.id;
 
-  // 🔥 طرد
-  socket.on("kickPlayer", (id) => {
-    room.players = room.players.filter(p => p.id !== id);
-    io.emit("updatePlayers", room.players);
-  });
+    io.emit("categoryChosen", cat);
 
-  // 🔥 خروج (بدون حذف فوري)
-  socket.on("disconnect", () => {
-    let p = room.players.find(x => x.id === socket.id);
-    if (p) {
-      p.connected = false;
-    }
+    // توزيع الأدوار
+    room.players.forEach(p => {
+      if (p.id === room.spyId) {
+        io.to(p.id).emit("yourRole", {
+          spy: true,
+          category: cat
+        });
+      } else {
+        io.to(p.id).emit("yourRole", {
+          spy: false,
+          word: room.word,
+          category: cat
+        });
+      }
+    });
   });
 
 });
 
 server.listen(3000, () => {
-  console.log("🔥 Server running...");
+  console.log("🔥 Server running");
 });
