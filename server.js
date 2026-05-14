@@ -9,90 +9,89 @@ const io = new Server(server);
 app.use(express.static("public"));
 
 let room = {
-  id: null,
   players: [],
-  started: false,
-  word: "",
+  votes: {},
+  voted: {},
   spyId: null,
-  category: ""
-};
-
-// كلمات
-const categories = {
-  animals: ["أسد","نمر","فيل","زرافة","قرد","كلب","قط","حصان","ذئب"],
-  objects: ["تلاجة","مروحة","سرير","كنبة","معلقة","كوباية","خلاط","بامبرز"],
-  apps: ["واتساب","فيسبوك","يوتيوب","تيك توك","انستجرام"],
-  anime: ["ناروتو","ون بيس","ديث نوت","هجوم العمالقة"],
-  cartoon: ["سبونج بوب","توم وجيري","بن تن"]
+  word: "",
+  category: "",
+  started: false
 };
 
 io.on("connection", (socket) => {
 
   socket.on("createRoom", (name) => {
-    room.id = Math.floor(Math.random() * 999999);
     room.players = [];
     room.started = false;
 
     room.players.push({ id: socket.id, name });
 
-    socket.emit("roomCreated", room.id);
     io.emit("updatePlayers", room.players);
   });
 
-  socket.on("joinRoom", ({ roomId, name }) => {
-    if (roomId != room.id) {
-      socket.emit("errorMsg", "❌ الرابط انتهى");
-      return;
-    }
-
-    if (room.started) {
-      socket.emit("errorMsg", "⛔ اللعبة بدأت بالفعل");
-      return;
-    }
-
+  socket.on("joinRoom", ({ name }) => {
     room.players.push({ id: socket.id, name });
     io.emit("updatePlayers", room.players);
   });
 
-  // بدء اللعبة
-  socket.on("startGame", () => {
-    room.started = true;
-    io.emit("showCategories");
+  // بدء التصويت
+  socket.on("startVote", () => {
+    room.votes = {};
+    room.voted = {};
+
+    room.players.forEach(p => {
+      room.votes[p.id] = [];
+    });
+
+    io.emit("voteStarted", room.players);
   });
 
-  // اختيار تصنيف
-  socket.on("chooseCategory", (cat) => {
-    room.category = cat;
+  // التصويت
+  socket.on("vote", ({ voter, targetId }) => {
 
-    const words = categories[cat];
-    room.word = words[Math.floor(Math.random() * words.length)];
+    if (room.voted[voter]) return; // منع تكرار
 
-    // اختيار جاسوس (مش أول لاعب = الهوست)
-    const others = room.players.slice(1);
-    const spy = others[Math.floor(Math.random() * others.length)];
-    room.spyId = spy.id;
+    room.voted[voter] = true;
+    room.votes[targetId].push(voter);
 
-    io.emit("categoryChosen", cat);
-
-    // توزيع الأدوار
-    room.players.forEach(p => {
-      if (p.id === room.spyId) {
-        io.to(p.id).emit("yourRole", {
-          spy: true,
-          category: cat
-        });
-      } else {
-        io.to(p.id).emit("yourRole", {
-          spy: false,
-          word: room.word,
-          category: cat
-        });
-      }
+    io.emit("voteUpdate", {
+      votes: room.votes,
+      total: Object.keys(room.voted).length,
+      max: room.players.length
     });
+
+    // لو الكل صوت
+    if (Object.keys(room.voted).length >= room.players.length) {
+
+      let maxVotes = 0;
+      let selected = null;
+
+      for (let id in room.votes) {
+        if (room.votes[id].length > maxVotes) {
+          maxVotes = room.votes[id].length;
+          selected = id;
+        }
+      }
+
+      io.emit("voteResult", selected);
+    }
+  });
+
+  // خروج لاعب بدون جلتش
+  socket.on("disconnect", () => {
+    room.players = room.players.filter(p => p.id !== socket.id);
+
+    delete room.voted[socket.id];
+
+    for (let id in room.votes) {
+      room.votes[id] = room.votes[id].filter(v => v !== socket.id);
+    }
+
+    io.emit("updatePlayers", room.players);
   });
 
 });
 
 server.listen(3000, () => {
-  console.log("🔥 Server running");
+  console.log("🔥 Voting Server Ready");
 });
