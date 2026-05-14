@@ -10,19 +10,21 @@ body{
   font-family:Cairo;
   background:linear-gradient(135deg,#0f172a,#1e293b);
   color:white;
-  text-align:center;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
 }
 
-/* شاشات */
-.screen{ display:none; }
-.active{ display:block; }
-
-/* كارد */
-.card{
+/* الكارد الرئيسي */
+.container{
   background:#1e293b;
-  padding:15px;
-  margin:10px;
-  border-radius:15px;
+  padding:25px;
+  border-radius:20px;
+  width:90%;
+  max-width:400px;
+  text-align:center;
+  box-shadow:0 0 30px rgba(0,0,0,0.5);
 }
 
 /* زرار */
@@ -30,61 +32,58 @@ button{
   padding:12px;
   border:none;
   border-radius:10px;
-  margin:5px;
-  cursor:pointer;
-  background:#6366f1;
+  margin-top:10px;
+  width:100%;
+  background:linear-gradient(45deg,#6366f1,#8b5cf6);
   color:white;
+  font-size:16px;
+  cursor:pointer;
 }
 
 button:hover{
-  background:#4f46e5;
+  opacity:.9;
 }
 
-/* اختيار */
-.selected{
-  background:#22c55e !important;
+/* اللينك */
+.link-box{
+  background:#0f172a;
+  padding:10px;
+  border-radius:10px;
+  margin-top:10px;
+  font-size:13px;
+  word-break:break-all;
 }
 
-/* جاسوس */
-.spy{
-  color:#ef4444;
-  font-size:22px;
+/* اللاعبين */
+.player{
+  background:#0f172a;
+  padding:10px;
+  margin:5px 0;
+  border-radius:10px;
 }
 </style>
+
 </head>
 
 <body>
 
-<!-- 🏠 HOME -->
-<div id="home" class="screen active">
+<div class="container">
+
   <h2>🕵️‍♂️ لعبة الجاسوس</h2>
-  <button onclick="createRoom()">إنشاء غرفة</button>
-</div>
 
-<!-- 👥 LOBBY -->
-<div id="lobby" class="screen">
-  <h3>👥 اللاعبين</h3>
+  <!-- زرار إنشاء -->
+  <button onclick="createRoom()">🎮 إنشاء غرفة</button>
+
+  <!-- اللينك -->
+  <div id="linkBox" class="link-box" style="display:none"></div>
+  <button id="copyBtn" style="display:none" onclick="copyLink()">📋 نسخ الرابط</button>
+
+  <!-- اللاعبين -->
   <div id="players"></div>
-  <button id="startBtn">بدء اللعب</button>
-</div>
 
-<!-- 🎮 GAME -->
-<div id="game" class="screen">
-  <div id="role"></div>
-  <button onclick="startVote()">🗳️ بدء التصويت</button>
-</div>
+  <!-- بدء -->
+  <button id="startBtn" style="display:none">🚀 بدء اللعب</button>
 
-<!-- 🗳️ VOTE -->
-<div id="vote" class="screen">
-  <h3>🗳️ التصويت</h3>
-  <div id="votePlayers"></div>
-</div>
-
-<!-- 🧠 GUESS -->
-<div id="guess" class="screen">
-  <h3>🧠 التخمين</h3>
-  <div id="guessWords"></div>
-  <button onclick="confirmGuess()">تأكيد الاختيار</button>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -93,127 +92,51 @@ button:hover{
 let socket = io();
 let isHost=false;
 let myName="𝐒𝐀𝐒𝐔𝐊𝐄";
-let selectedWord=null;
-
-/* تغيير الشاشة */
-function show(id){
-  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-}
 
 /* إنشاء غرفة */
 function createRoom(){
   isHost=true;
-  socket.emit("createRoom",myName);
-  show("lobby");
+
+  socket.emit("createRoom", myName);
+
+  // إنشاء لينك
+  let roomId = Math.floor(Math.random()*10000);
+  let link = window.location.origin + "?room=" + roomId;
+
+  document.getElementById("linkBox").innerText = link;
+  document.getElementById("linkBox").style.display="block";
+
+  document.getElementById("copyBtn").style.display="block";
+
+  // إرسال للسيرفر (اختياري لو هتربطه)
+  window.roomId = roomId;
+}
+
+/* نسخ */
+function copyLink(){
+  let text = document.getElementById("linkBox").innerText;
+
+  navigator.clipboard.writeText(text);
+
+  document.getElementById("copyBtn").style.display="none";
 }
 
 /* تحديث اللاعبين */
 socket.on("updatePlayers",(players)=>{
   let div=document.getElementById("players");
-  div.innerHTML="";
+  div.innerHTML="<h3>👥 اللاعبين</h3>";
 
   players.forEach(p=>{
-    div.innerHTML+=`<div class="card">${p.name}</div>`;
+    div.innerHTML+=`<div class="player">${p.name}</div>`;
   });
 
   if(players.length>=3 && isHost){
+    document.getElementById("startBtn").style.display="block";
+
     document.getElementById("startBtn").onclick=()=>{
       socket.emit("startGame");
-    }
+    };
   }
-});
-
-/* تصنيفات */
-socket.on("showCategories",()=>{
-  let cats=["anime","cartoon","objects","animals","apps"];
-  let div=document.getElementById("players");
-  div.innerHTML="<h3>اختار تصنيف</h3>";
-
-  cats.forEach(c=>{
-    div.innerHTML+=`<div class="card" onclick="pickCat('${c}',this)">${c}</div>`;
-  });
-});
-
-let selectedCat=null;
-
-function pickCat(c,el){
-  if(!isHost) return;
-  selectedCat=c;
-
-  document.querySelectorAll(".card").forEach(x=>x.classList.remove("selected"));
-  el.classList.add("selected");
-
-  socket.emit("chooseCategory",c);
-}
-
-/* الدور */
-socket.on("role",(data)=>{
-  show("game");
-
-  if(data.spy){
-    document.getElementById("role").innerHTML=`<div class="spy">🕵️‍♂️ انت الجاسوس</div>`;
-  }else{
-    document.getElementById("role").innerHTML=`<h2>${data.word}</h2><p>${data.cat}</p>`;
-  }
-});
-
-/* التصويت */
-function startVote(){
-  socket.emit("startVote");
-}
-
-socket.on("voteStart",(players)=>{
-  show("vote");
-
-  let div=document.getElementById("votePlayers");
-  div.innerHTML="";
-
-  players.forEach(p=>{
-    div.innerHTML+=`
-    <div class="card">
-      ${p.name}
-      <br>
-      <button onclick="vote('${p.id}')">تصويت</button>
-    </div>`;
-  });
-});
-
-function vote(id){
-  socket.emit("vote",{voter:myName,targetId:id});
-}
-
-socket.on("voteResult",(res)=>{
-  alert("تم انتهاء التصويت");
-  socket.emit("startGuess");
-});
-
-/* التخمين */
-socket.on("guessUI",(data)=>{
-  show("guess");
-
-  let div=document.getElementById("guessWords");
-  div.innerHTML="";
-
-  data.words.forEach(w=>{
-    div.innerHTML+=`<button onclick="selectWord('${w}',this)">${w}</button>`;
-  });
-});
-
-function selectWord(w,el){
-  selectedWord=w;
-
-  document.querySelectorAll("#guessWords button").forEach(b=>b.classList.remove("selected"));
-  el.classList.add("selected");
-}
-
-function confirmGuess(){
-  if(!selectedWord) return;
-  socket.emit("confirmGuess",selectedWord);
-}
-
-socket.on("guessResult",(d)=>{
-  alert("الجاسوس اختار: "+d.word+"\nالصح: "+d.correct);
 });
 </script>
 
