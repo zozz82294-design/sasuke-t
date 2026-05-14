@@ -6,30 +6,43 @@
 
 <style>
 body{
+  margin:0;
   font-family:Cairo;
-  background:#0f172a;
+  background:linear-gradient(45deg,#0f172a,#1e293b);
   color:white;
   text-align:center;
 }
 
-.cat, .player{
+/* كروت */
+.card{
   background:#1e293b;
   margin:10px;
   padding:15px;
-  border-radius:10px;
-  cursor:pointer;
+  border-radius:15px;
+  display:inline-block;
+  width:150px;
+  transition:.3s;
 }
 
-.cat:hover{
-  background:#22c55e;
+.card:hover{
+  transform:scale(1.1);
 }
 
 .selected{
-  background:gold !important;
+  background:#22c55e !important;
 }
 
-.red{
-  background:#ef4444 !important;
+.spy{
+  color:#ef4444;
+  font-size:24px;
+}
+
+button{
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  margin:5px;
+  cursor:pointer;
 }
 </style>
 </head>
@@ -40,9 +53,9 @@ body{
 
 <button onclick="createRoom()">إنشاء غرفة</button>
 <button id="startBtn">بدء اللعب</button>
-<button onclick="startVote()">بدء التصويت</button>
+<button onclick="startVote()">🗳️ بدء التصويت</button>
 
-<div id="categories" style="display:none;"></div>
+<div id="cats"></div>
 <div id="role"></div>
 <div id="players"></div>
 <div id="guess"></div>
@@ -50,13 +63,14 @@ body{
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
-let socket = io();
+let socket=io();
 let isHost=false;
-let selectedCat=null;
 let myName="𝐒𝐀𝐒𝐔𝐊𝐄";
 let myId=null;
+let selectedCat=null;
+let selectedWord=null;
 
-socket.on("connect",()=> myId=socket.id);
+socket.on("connect",()=>myId=socket.id);
 
 function createRoom(){
   isHost=true;
@@ -64,56 +78,43 @@ function createRoom(){
 }
 
 socket.on("updatePlayers",(players)=>{
-  const div=document.getElementById("players");
+  let div=document.getElementById("players");
   div.innerHTML="";
-
   players.forEach(p=>{
-    const el=document.createElement("div");
-    el.className="player";
-    el.innerText=p.name;
-    div.appendChild(el);
+    div.innerHTML+=`<div class="card">${p.name}</div>`;
   });
 
   if(players.length>=3 && isHost){
-    document.getElementById("startBtn").onclick=()=>{
-      socket.emit("startGame");
-    }
+    document.getElementById("startBtn").onclick=()=>socket.emit("startGame");
   }
 });
 
 socket.on("showCategories",()=>{
-  const cats=["anime","cartoon","objects","animals","apps"];
-  const div=document.getElementById("categories");
-  div.style.display="block";
+  let cats=["anime","cartoon","objects","animals","apps"];
+  let div=document.getElementById("cats");
+  div.innerHTML="";
 
   cats.forEach(c=>{
-    const el=document.createElement("div");
-    el.className="cat";
-    el.innerText=c;
-
-    el.onclick=()=>{
-      if(!isHost) return;
-
-      selectedCat=c;
-      document.querySelectorAll(".cat").forEach(x=>x.classList.remove("selected"));
-      el.classList.add("selected");
-    };
-
-    div.appendChild(el);
+    div.innerHTML+=`<div class="card" onclick="pick('${c}',this)">${c}</div>`;
   });
 });
 
+function pick(c,el){
+  if(!isHost) return;
+  selectedCat=c;
+  document.querySelectorAll(".card").forEach(x=>x.classList.remove("selected"));
+  el.classList.add("selected");
+}
+
 document.getElementById("startBtn").ondblclick=()=>{
-  if(selectedCat){
-    socket.emit("chooseCategory",selectedCat);
-  }
+  if(selectedCat) socket.emit("chooseCategory",selectedCat);
 };
 
-socket.on("yourRole",(data)=>{
+socket.on("role",(data)=>{
   if(data.spy){
-    document.getElementById("role").innerHTML="🕵️‍♂️ انت الجاسوس";
+    document.getElementById("role").innerHTML=`<div class="spy">🕵️‍♂️ انت الجاسوس</div><p>${data.cat}</p>`;
   }else{
-    document.getElementById("role").innerHTML="الكلمة: "+data.word;
+    document.getElementById("role").innerHTML=`<h3>${data.word}</h3><p>${data.cat}</p>`;
   }
 });
 
@@ -121,22 +122,17 @@ function startVote(){
   socket.emit("startVote");
 }
 
-socket.on("voteStarted",(players)=>{
-  const div=document.getElementById("players");
+socket.on("voteStart",(players)=>{
+  let div=document.getElementById("players");
   div.innerHTML="";
-
   players.forEach(p=>{
-    const el=document.createElement("div");
-    el.className="player";
-
-    el.innerHTML=`
-      ${p.name}
-      <br>
-      <button onclick="vote('${p.id}','${p.name}')">تصويت</button>
-      <div id="v_${p.id}"></div>
-    `;
-
-    div.appendChild(el);
+    div.innerHTML+=`
+      <div class="card">
+        ${p.name}
+        <br>
+        <button onclick="vote('${p.id}','${p.name}')">تصويت</button>
+        <div id="v_${p.id}"></div>
+      </div>`;
   });
 });
 
@@ -144,51 +140,48 @@ function vote(id,name){
   socket.emit("vote",{voter:myName,targetId:id});
 }
 
-socket.on("voteUpdate",(data)=>{
-  for(let id in data.votes){
-    const voters=data.votes[id];
-    document.getElementById("v_"+id).innerText=voters.join("-");
-  }
-});
-
 socket.on("voteResult",(res)=>{
   if(res.selected!==res.spy){
-    alert("❌ خطأ! الجاسوس هو الصحيح");
+    alert("❌ تم اختيار شخص غلط");
   }else{
     alert("✅ تم كشف الجاسوس");
   }
-
   socket.emit("startGuess");
 });
 
-socket.on("showGuess",(data)=>{
-  const div=document.getElementById("guess");
+socket.on("guessUI",(data)=>{
+  let div=document.getElementById("guess");
   div.innerHTML="";
 
   data.words.forEach(w=>{
-    const btn=document.createElement("button");
-    btn.innerText=w;
-
-    if(myId===data.spyId){
-      btn.onclick=()=>{
-        socket.emit("selectGuess",{word:w,player:myName});
-      };
-    }
-
-    div.appendChild(btn);
+    div.innerHTML+=`<button onclick="pickWord('${w}',this)">${w}</button>`;
   });
 });
 
-socket.on("playerSelected",({word,player})=>{
+function pickWord(w,el){
+  selectedWord=w;
+  document.querySelectorAll("#guess button").forEach(b=>b.classList.remove("selected"));
+  el.classList.add("selected");
+
+  socket.emit("selectGuess",{word:w,player:myName});
+}
+
+socket.on("selectUpdate",({word,player})=>{
   document.querySelectorAll("#guess button").forEach(b=>{
-    if(b.innerText===word){
+    if(b.innerText.includes(word)){
       b.innerText=word+" ("+player+")";
     }
   });
 });
 
-socket.on("guessResult",(data)=>{
-  alert("الجاسوس خمن: "+data.word+" | الصح: "+data.correct);
+document.addEventListener("dblclick",()=>{
+  if(selectedWord){
+    socket.emit("confirmGuess",selectedWord);
+  }
+});
+
+socket.on("guessResult",(d)=>{
+  alert("🕵️‍♂️ الجاسوس خمن: "+d.word+"\n✔️ الصح: "+d.correct);
 });
 </script>
 
