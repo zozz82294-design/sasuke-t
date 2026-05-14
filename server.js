@@ -8,56 +8,104 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-let players = [];
-let roomId = null;
+let room = {
+  id: null,
+  players: [],
+  started: false
+};
 
 io.on("connection", (socket) => {
 
-  // إنشاء غرفة
+  // 🔥 إنشاء غرفة
   socket.on("createRoom", (name) => {
-    players = [];
-    roomId = Math.floor(Math.random() * 9999);
+    room.id = Math.floor(Math.random() * 999999);
+    room.players = [];
+    room.started = false;
 
-    players.push({ id: socket.id, name });
+    room.players.push({
+      id: socket.id,
+      name: name,
+      connected: true
+    });
 
-    socket.emit("roomCreated", roomId);
-    io.emit("updatePlayers", players);
+    socket.emit("roomCreated", room.id);
+    io.emit("updatePlayers", room.players);
   });
 
-  // انضمام
-  socket.on("joinRoom", ({ roomId: rid, name }) => {
-    if (rid != roomId) {
-      socket.emit("errorMsg", "الرابط انتهت صلاحيته");
+  // 🔥 انضمام
+  socket.on("joinRoom", ({ roomId, name }) => {
+
+    // ❌ لينك قديم
+    if (roomId != room.id) {
+      socket.emit("errorMsg", "❌ لقد انتهت صلاحية الرابط");
       return;
     }
 
-    players.push({ id: socket.id, name });
+    // ❌ لو اللعبة بدأت
+    if (room.started) {
+      socket.emit("errorMsg", "⛔ اللعبة بدأت بالفعل، انتظر إعادة اللعب");
+      return;
+    }
 
-    io.emit("updatePlayers", players);
+    // 🔥 رجوع بنفس الاسم (ريفرش)
+    let existing = room.players.find(p => p.name === name);
+
+    if (existing) {
+      existing.id = socket.id;
+      existing.connected = true;
+    } else {
+      // ❌ منع تكرار الأسماء
+      if (room.players.some(p => p.name === name)) {
+        socket.emit("errorMsg", "الاسم مستخدم");
+        return;
+      }
+
+      room.players.push({
+        id: socket.id,
+        name: name,
+        connected: true
+      });
+    }
+
+    io.emit("updatePlayers", room.players);
   });
 
-  // تغيير اسم
+  // 🔥 بدء اللعبة
+  socket.on("startGame", () => {
+    room.started = true;
+    io.emit("gameStarted");
+  });
+
+  // 🔥 إعادة اللعبة
+  socket.on("restartGame", () => {
+    room.started = false;
+    io.emit("gameRestarted");
+  });
+
+  // 🔥 تغيير اسم
   socket.on("renamePlayer", ({ id, newName }) => {
-    const player = players.find(p => p.id === id);
-    if (player) player.name = newName;
+    let p = room.players.find(x => x.id === id);
+    if (p) p.name = newName;
 
-    io.emit("updatePlayers", players);
+    io.emit("updatePlayers", room.players);
   });
 
-  // طرد
+  // 🔥 طرد
   socket.on("kickPlayer", (id) => {
-    players = players.filter(p => p.id !== id);
-    io.emit("updatePlayers", players);
+    room.players = room.players.filter(p => p.id !== id);
+    io.emit("updatePlayers", room.players);
   });
 
-  // مغادرة (لما يقفل أو يخرج)
+  // 🔥 خروج (بدون حذف فوري)
   socket.on("disconnect", () => {
-    players = players.filter(p => p.id !== socket.id);
-    io.emit("updatePlayers", players);
+    let p = room.players.find(x => x.id === socket.id);
+    if (p) {
+      p.connected = false;
+    }
   });
 
 });
 
 server.listen(3000, () => {
-  console.log("Server running...");
+  console.log("🔥 Server running...");
 });
