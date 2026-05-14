@@ -5,44 +5,31 @@
 <title>لعبة الجاسوس</title>
 
 <style>
-body {
-  font-family: Cairo;
-  background: linear-gradient(45deg,#0f172a,#1e293b);
-  color: white;
-  text-align: center;
+body{
+  font-family:Cairo;
+  background:#0f172a;
+  color:white;
+  text-align:center;
 }
 
-button {
-  padding: 12px;
-  border: none;
-  border-radius: 10px;
-  margin: 10px;
+.cat, .player{
+  background:#1e293b;
+  margin:10px;
+  padding:15px;
+  border-radius:10px;
+  cursor:pointer;
 }
 
-.start {
-  background: gray;
+.cat:hover{
+  background:#22c55e;
 }
 
-.start.active {
-  background: green;
+.selected{
+  background:gold !important;
 }
 
-.categories {
-  display: none;
-}
-
-.cat {
-  background: #334155;
-  padding: 15px;
-  margin: 10px;
-  border-radius: 10px;
-  transition: 0.3s;
-  cursor: pointer;
-}
-
-.cat:hover {
-  transform: scale(1.1);
-  background: #22c55e;
+.red{
+  background:#ef4444 !important;
 }
 </style>
 </head>
@@ -51,86 +38,157 @@ button {
 
 <h2>🕵️‍♂️ لعبة الجاسوس</h2>
 
-<button onclick="createRoom()">🎮 إنشاء غرفة</button>
+<button onclick="createRoom()">إنشاء غرفة</button>
+<button id="startBtn">بدء اللعب</button>
+<button onclick="startVote()">بدء التصويت</button>
 
-<button id="startBtn" class="start">▶️ بدء اللعب</button>
-
-<div id="categories" class="categories">
-  <div class="cat" onclick="selectCat('anime')">أنمي</div>
-  <div class="cat" onclick="selectCat('cartoon')">كرتون</div>
-  <div class="cat" onclick="selectCat('objects')">جماد</div>
-  <div class="cat" onclick="selectCat('animals')">حيوانات</div>
-  <div class="cat" onclick="selectCat('apps')">تطبيقات</div>
-</div>
-
+<div id="categories" style="display:none;"></div>
 <div id="role"></div>
+<div id="players"></div>
+<div id="guess"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
 let socket = io();
-let isHost = false;
-let selectedCat = null;
+let isHost=false;
+let selectedCat=null;
+let myName="𝐒𝐀𝐒𝐔𝐊𝐄";
+let myId=null;
+
+socket.on("connect",()=> myId=socket.id);
 
 function createRoom(){
-  isHost = true;
-  socket.emit("createRoom","𝐒𝐀𝐒𝐔𝐊𝐄");
+  isHost=true;
+  socket.emit("createRoom",myName);
 }
 
 socket.on("updatePlayers",(players)=>{
-  if(players.length >=3 && isHost){
-    let btn = document.getElementById("startBtn");
-    btn.classList.add("active");
+  const div=document.getElementById("players");
+  div.innerHTML="";
 
-    btn.onclick = ()=>{
+  players.forEach(p=>{
+    const el=document.createElement("div");
+    el.className="player";
+    el.innerText=p.name;
+    div.appendChild(el);
+  });
+
+  if(players.length>=3 && isHost){
+    document.getElementById("startBtn").onclick=()=>{
       socket.emit("startGame");
     }
   }
 });
 
 socket.on("showCategories",()=>{
-  document.getElementById("categories").style.display="block";
+  const cats=["anime","cartoon","objects","animals","apps"];
+  const div=document.getElementById("categories");
+  div.style.display="block";
+
+  cats.forEach(c=>{
+    const el=document.createElement("div");
+    el.className="cat";
+    el.innerText=c;
+
+    el.onclick=()=>{
+      if(!isHost) return;
+
+      selectedCat=c;
+      document.querySelectorAll(".cat").forEach(x=>x.classList.remove("selected"));
+      el.classList.add("selected");
+    };
+
+    div.appendChild(el);
+  });
 });
 
-// تحديد
-function selectCat(cat){
-  if(!isHost) return;
-
-  selectedCat = cat;
-
-  document.querySelectorAll(".cat").forEach(c=>{
-    c.style.background="#334155";
-  });
-
-  event.target.style.background="gold";
-}
-
-// اختيار نهائي
-document.getElementById("startBtn").addEventListener("dblclick",()=>{
+document.getElementById("startBtn").ondblclick=()=>{
   if(selectedCat){
     socket.emit("chooseCategory",selectedCat);
   }
-});
+};
 
-socket.on("categoryChosen",(cat)=>{
-  document.body.innerHTML += `<h3>تم اختيار: ${cat}</h3>`;
-});
-
-// عرض الدور
 socket.on("yourRole",(data)=>{
-  const div = document.getElementById("role");
-
   if(data.spy){
-    div.innerHTML = `
-      <h2>🕵️‍♂️ انت الجاسوس</h2>
-      <p>التصنيف: ${data.category}</p>
-    `;
-  } else {
-    div.innerHTML = `
-      <h2>🔑 الكلمة: ${data.word}</h2>
-      <p>التصنيف: ${data.category}</p>
-    `;
+    document.getElementById("role").innerHTML="🕵️‍♂️ انت الجاسوس";
+  }else{
+    document.getElementById("role").innerHTML="الكلمة: "+data.word;
   }
+});
+
+function startVote(){
+  socket.emit("startVote");
+}
+
+socket.on("voteStarted",(players)=>{
+  const div=document.getElementById("players");
+  div.innerHTML="";
+
+  players.forEach(p=>{
+    const el=document.createElement("div");
+    el.className="player";
+
+    el.innerHTML=`
+      ${p.name}
+      <br>
+      <button onclick="vote('${p.id}','${p.name}')">تصويت</button>
+      <div id="v_${p.id}"></div>
+    `;
+
+    div.appendChild(el);
+  });
+});
+
+function vote(id,name){
+  socket.emit("vote",{voter:myName,targetId:id});
+}
+
+socket.on("voteUpdate",(data)=>{
+  for(let id in data.votes){
+    const voters=data.votes[id];
+    document.getElementById("v_"+id).innerText=voters.join("-");
+  }
+});
+
+socket.on("voteResult",(res)=>{
+  if(res.selected!==res.spy){
+    alert("❌ خطأ! الجاسوس هو الصحيح");
+  }else{
+    alert("✅ تم كشف الجاسوس");
+  }
+
+  socket.emit("startGuess");
+});
+
+socket.on("showGuess",(data)=>{
+  const div=document.getElementById("guess");
+  div.innerHTML="";
+
+  data.words.forEach(w=>{
+    const btn=document.createElement("button");
+    btn.innerText=w;
+
+    if(myId===data.spyId){
+      btn.onclick=()=>{
+        socket.emit("selectGuess",{word:w,player:myName});
+      };
+    }
+
+    div.appendChild(btn);
+  });
+});
+
+socket.on("playerSelected",({word,player})=>{
+  document.querySelectorAll("#guess button").forEach(b=>{
+    if(b.innerText===word){
+      b.innerText=word+" ("+player+")";
+    }
+  });
+});
+
+socket.on("guessResult",(data)=>{
+  alert("الجاسوس خمن: "+data.word+" | الصح: "+data.correct);
 });
 </script>
 
