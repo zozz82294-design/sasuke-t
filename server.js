@@ -19,11 +19,11 @@ let room = {
 };
 
 const categories = {
-  animals: ["أسد","نمر","فيل","زرافة","قرد","كلب","قط","حصان","ذئب"],
-  objects: ["تلاجة","مروحة","سرير","كنبة","معلقة","كوباية","خلاط","بامبرز"],
-  apps: ["واتساب","فيسبوك","يوتيوب","تيك توك","انستجرام"],
-  anime: ["ناروتو","ون بيس","ديث نوت","هجوم العمالقة"],
-  cartoon: ["سبونج بوب","توم وجيري","بن تن"]
+  animals: ["أسد","نمر","فيل","زرافة","قرد","كلب","قط","حصان","ذئب","ثعلب","دب","جمل"],
+  objects: ["تلاجة","مروحة","سرير","كنبة","معلقة","كوباية","خلاط","بامبرز","شاشة","موبايل","ريموت"],
+  apps: ["واتساب","فيسبوك","يوتيوب","تيك توك","انستجرام","تليجرام","سناب شات"],
+  anime: ["ناروتو","ون بيس","ديث نوت","هجوم العمالقة","دراغون بول"],
+  cartoon: ["سبونج بوب","توم وجيري","بن تن","غامبول"]
 };
 
 io.on("connection", (socket) => {
@@ -31,7 +31,6 @@ io.on("connection", (socket) => {
   socket.on("createRoom", (name) => {
     room.players = [];
     room.started = false;
-
     room.players.push({ id: socket.id, name });
     io.emit("updatePlayers", room.players);
   });
@@ -48,7 +47,6 @@ io.on("connection", (socket) => {
 
   socket.on("chooseCategory", (cat) => {
     room.category = cat;
-
     const words = categories[cat];
     room.word = words[Math.floor(Math.random() * words.length)];
 
@@ -60,30 +58,18 @@ io.on("connection", (socket) => {
 
     room.players.forEach(p => {
       if (p.id === room.spyId) {
-        io.to(p.id).emit("yourRole", {
-          spy: true,
-          category: cat
-        });
+        io.to(p.id).emit("role", { spy: true, cat });
       } else {
-        io.to(p.id).emit("yourRole", {
-          spy: false,
-          word: room.word,
-          category: cat
-        });
+        io.to(p.id).emit("role", { spy: false, word: room.word, cat });
       }
     });
   });
 
-  // 🔥 التصويت
   socket.on("startVote", () => {
     room.votes = {};
     room.voted = {};
-
-    room.players.forEach(p => {
-      room.votes[p.id] = [];
-    });
-
-    io.emit("voteStarted", room.players);
+    room.players.forEach(p => room.votes[p.id] = []);
+    io.emit("voteStart", room.players);
   });
 
   socket.on("vote", ({ voter, targetId }) => {
@@ -100,8 +86,7 @@ io.on("connection", (socket) => {
 
     if (Object.keys(room.voted).length >= room.players.length) {
 
-      let max = 0;
-      let selected = null;
+      let max = 0, selected = null;
 
       for (let id in room.votes) {
         if (room.votes[id].length > max) {
@@ -118,30 +103,26 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 🔥 التخمين
   socket.on("startGuess", () => {
     let words = [room.word];
 
-    const all = [
-      "أسد","نمر","فيل","زرافة","قرد","كلب","قط","حصان",
-      "ذئب","ثعلب","دب","خروف","بقرة","جمل"
-    ];
+    const pool = ["أسد","نمر","فيل","زرافة","كلب","قط","حصان","ذئب","دب","ثعلب","خروف","بقرة","جمل"];
 
     while (words.length < 13) {
-      const w = all[Math.floor(Math.random() * all.length)];
+      let w = pool[Math.floor(Math.random()*pool.length)];
       if (!words.includes(w)) words.push(w);
     }
 
-    words.sort(() => Math.random() - 0.5);
+    words.sort(()=>Math.random()-0.5);
 
-    io.emit("showGuess", {
+    io.emit("guessUI", {
       words,
       spyId: room.spyId
     });
   });
 
   socket.on("selectGuess", ({ word, player }) => {
-    io.emit("playerSelected", { word, player });
+    io.emit("selectUpdate", { word, player });
   });
 
   socket.on("confirmGuess", (word) => {
@@ -153,18 +134,13 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     room.players = room.players.filter(p => p.id !== socket.id);
-
     delete room.voted[socket.id];
-
     for (let id in room.votes) {
       room.votes[id] = room.votes[id].filter(v => v !== socket.id);
     }
-
     io.emit("updatePlayers", room.players);
   });
 
 });
 
-server.listen(3000, () => {
-  console.log("🔥 Server Ready");
-});
+server.listen(3000, () => console.log("🔥 PRO SERVER"));
