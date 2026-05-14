@@ -13,125 +13,111 @@ body {
   font-family: Cairo;
   background: #0f172a;
   color: white;
+  text-align: center;
 }
 
-/* زر الاعدادات */
-.settings-btn {
+/* زر المغادرة */
+.leave-btn {
   position: fixed;
-  top: 15px;
-  left: 15px;
-  font-size: 24px;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  background: red;
+  color: white;
+  font-size: 16px;
   cursor: pointer;
-  display: none;
 }
 
-/* القائمة */
-.settings-panel {
+/* شاشة الخروج */
+.leave-screen {
   position: fixed;
   top: 0;
-  left: -100%;
-  width: 80%;
-  height: 100%;
-  background: #1e293b;
-  padding: 20px;
-  transition: 0.3s;
-}
-
-.settings-panel.active {
   left: 0;
-}
-
-.player-item {
-  background: #334155;
-  padding: 10px;
-  margin: 10px 0;
-  border-radius: 10px;
-}
-
-button {
-  margin-top: 5px;
-  padding: 6px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="settings-btn" id="settingsBtn">⚙️</div>
+<h1>🕵️‍♂️ لعبة الجاسوس</h1>
 
-<div class="settings-panel" id="settingsPanel">
-  <h3>⚙️ الإعدادات</h3>
+<button onclick="createRoom()">🎮 إنشاء غرفة</button>
 
-  <div id="playersList"></div>
+<div id="joinSection" style="display:none;">
+  <input id="nameInput" placeholder="اكتب اسمك">
+  <button onclick="joinRoom()">🚀 انضمام</button>
+</div>
 
-  <button id="restartBtn" style="display:none;">🔄 إعادة اللعب</button>
+<button class="leave-btn" onclick="leaveGame()">🚪 مغادرة</button>
+
+<div id="leaveScreen" class="leave-screen">
+  ❗ لقد غادرت اللعبة
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
 let socket = io();
-let isHost = false;
+let currentRoom = null;
 
 // إنشاء روم
 function createRoom() {
-  isHost = true;
+  currentRoom = Math.floor(Math.random() * 9999);
+
+  localStorage.setItem("roomId", currentRoom);
+  localStorage.setItem("playerName", "𝐒𝐀𝐒𝐔𝐊𝐄");
+
   socket.emit("createRoom", "𝐒𝐀𝐒𝐔𝐊𝐄");
-  document.getElementById("settingsBtn").style.display = "block";
 }
 
-// فتح/قفل الإعدادات
-document.getElementById("settingsBtn").onclick = () => {
-  document.getElementById("settingsPanel").classList.toggle("active");
-};
+// دخول من لينك
+const urlParams = new URLSearchParams(window.location.search);
+const roomId = urlParams.get("room");
 
-// تحديث اللاعبين
-socket.on("updatePlayers", (players) => {
-  const list = document.getElementById("playersList");
-  list.innerHTML = "";
+// لو في روم محفوظ
+const savedRoom = localStorage.getItem("roomId");
+const savedName = localStorage.getItem("playerName");
 
-  players.forEach(p => {
-    const div = document.createElement("div");
-    div.className = "player-item";
-
-    div.innerHTML = `
-      ${p.name}
-      ${isHost ? `
-        <br>
-        <button onclick="renamePlayer('${p.id}')">✏️ تغيير الاسم</button>
-        <button onclick="kickPlayer('${p.id}')">❌ طرد</button>
-      ` : ""}
-    `;
-
-    list.appendChild(div);
-  });
-
-  // 🔥 يظهر إعادة اللعب لو 3 لاعبين
-  if (players.length >= 3 && isHost) {
-    document.getElementById("restartBtn").style.display = "block";
-  }
-});
-
-// تغيير اسم
-function renamePlayer(id) {
-  const newName = prompt("اكتب الاسم الجديد:");
-  if (newName) {
-    socket.emit("renamePlayer", { id, newName });
-  }
+if (savedRoom && savedName) {
+  currentRoom = savedRoom;
+  socket.emit("joinRoom", { roomId: savedRoom, name: savedName });
+}
+else if (roomId) {
+  currentRoom = roomId;
+  document.getElementById("joinSection").style.display = "block";
 }
 
-// طرد
-function kickPlayer(id) {
-  socket.emit("kickPlayer", id);
+// انضمام
+function joinRoom() {
+  const name = document.getElementById("nameInput").value;
+
+  if (!name) return alert("اكتب اسمك");
+
+  localStorage.setItem("roomId", currentRoom);
+  localStorage.setItem("playerName", name);
+
+  socket.emit("joinRoom", { roomId: currentRoom, name });
 }
 
-// إعادة اللعب
-document.getElementById("restartBtn").onclick = () => {
-  socket.emit("restartGame");
-};
+// مغادرة
+function leaveGame() {
+  localStorage.removeItem("roomId");
+  localStorage.removeItem("playerName");
+
+  socket.disconnect();
+
+  document.getElementById("leaveScreen").style.display = "flex";
+}
 </script>
 
 </body>
